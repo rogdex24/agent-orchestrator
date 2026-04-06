@@ -270,7 +270,7 @@ export function DirectTerminal({
         terminalInstance.current = terminal;
 
         // Fit terminal to container
-        fit.fit();
+        try { fit.fit(); } catch { /* dimensions not ready yet */ }
 
         // ── Preserve selection while terminal receives output ────────
         // xterm.js clears the selection on every terminal.write(). We
@@ -352,7 +352,7 @@ export function DirectTerminal({
         // Handle window resize
         const handleResize = () => {
           if (fit) {
-            fit.fit();
+            try { fit.fit(); } catch { /* dimensions not ready yet */ }
             resizeTerminalMux(sessionId, terminal.cols, terminal.rows);
           }
         };
@@ -454,7 +454,7 @@ export function DirectTerminal({
 
       // Container is at target size, now resize terminal
       terminal.refresh(0, terminal.rows - 1);
-      fit.fit();
+      try { fit.fit(); } catch { /* dimensions not ready yet */ }
       terminal.refresh(0, terminal.rows - 1);
 
       // Send new size to server via mux
