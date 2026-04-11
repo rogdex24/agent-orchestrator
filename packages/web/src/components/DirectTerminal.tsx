@@ -421,7 +421,7 @@ export function DirectTerminal({
     const fit = fitAddon.current;
     const terminal = terminalInstance.current;
     if (!fit || !terminal) return;
-    fit.fit();
+    if (!safeFit(fit)) return; // dimensions not ready — skip sending stale size
     resizeTerminalMux(sessionId, terminal.cols, terminal.rows);
   }, [muxStatus, sessionId, resizeTerminalMux]);
 
