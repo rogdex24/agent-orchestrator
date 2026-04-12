@@ -561,8 +561,8 @@ async function autoCreateConfig(workingDir: string): Promise<OrchestratorConfig>
 
   // Build config with smart defaults
   const projectId = env.isGitRepo ? basename(workingDir) : "my-project";
-  const repo = env.ownerRepo || "owner/repo";
-  const path = env.isGitRepo ? workingDir : `~/${projectId}`;
+  const repo = env.ownerRepo || undefined;
+  const path = workingDir;
   const defaultBranch = env.defaultBranch || "main";
 
   // Detect available agent runtimes via plugin registry
@@ -588,7 +588,7 @@ async function autoCreateConfig(workingDir: string): Promise<OrchestratorConfig>
       [projectId]: {
         name: projectId,
         sessionPrefix: generateSessionPrefix(projectId),
-        repo,
+        ...(repo ? { repo } : {}),
         path,
         defaultBranch,
         ...(agentRules ? { agentRules } : {}),
@@ -607,9 +607,9 @@ async function autoCreateConfig(workingDir: string): Promise<OrchestratorConfig>
 
   console.log(chalk.green(`✓ Config created: ${outputPath}\n`));
 
-  if (repo === "owner/repo") {
+  if (!repo) {
     console.log(chalk.yellow("⚠ Could not detect GitHub remote."));
-    console.log(chalk.dim("  Update the 'repo' field in the config before spawning agents.\n"));
+    console.log(chalk.dim("  Add a 'repo' field (owner/repo) to the config before spawning agents.\n"));
   }
 
   if (!env.hasTmux) {
@@ -719,7 +719,7 @@ async function addProjectToConfig(
 
   rawConfig.projects[projectId] = {
     name: projectId,
-    repo: ownerRepo || "owner/repo",
+    ...(ownerRepo ? { repo: ownerRepo } : {}),
     path: resolvedPath,
     defaultBranch,
     sessionPrefix: prefix,
