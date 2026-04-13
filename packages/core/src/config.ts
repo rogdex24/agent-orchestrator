@@ -228,6 +228,12 @@ const InstalledPluginConfigSchema = z
     }
   });
 
+const DashboardConfigSchema = z
+  .object({
+    attentionZones: z.enum(["simple", "detailed"]).default("simple"),
+  })
+  .strict();
+
 const OrchestratorConfigSchema = z.object({
   port: z.number().default(3000),
   terminalPort: z.number().optional(),
@@ -235,6 +241,7 @@ const OrchestratorConfigSchema = z.object({
   readyThresholdMs: z.number().nonnegative().default(300_000),
   defaults: DefaultPluginsSchema.default({}),
   plugins: z.array(InstalledPluginConfigSchema).default([]),
+  dashboard: DashboardConfigSchema.optional(),
   projects: z.record(
     z.string().regex(/^[a-zA-Z0-9_-]+$/, "Project ID must match [a-zA-Z0-9_-]+ (no dots, slashes, or special characters)"),
     ProjectConfigSchema,
