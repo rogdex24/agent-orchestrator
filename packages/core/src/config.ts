@@ -228,11 +228,9 @@ const InstalledPluginConfigSchema = z
     }
   });
 
-const DashboardConfigSchema = z
-  .object({
-    attentionZones: z.enum(["simple", "detailed"]).default("simple"),
-  })
-  .strict();
+const DashboardConfigSchema = z.object({
+  attentionZones: z.enum(["simple", "detailed"]).default("simple"),
+});
 
 const OrchestratorConfigSchema = z.object({
   port: z.number().default(3000),
