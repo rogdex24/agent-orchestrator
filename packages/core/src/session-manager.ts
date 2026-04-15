@@ -343,6 +343,34 @@ export function createSessionManager(deps: SessionManagerDeps): OpenCodeSessionM
     return false;
   }
 
+  /**
+   * Stricter variant of the predicate, used ONLY by the repair-on-read path.
+   * Accepts:
+   *   - records with `role: orchestrator` already stamped (idempotent)
+   *   - the bare `{sessionPrefix}-orchestrator` legacy shape (single-orchestrator
+   *     AO versions) — anchored to THIS project's prefix
+   *   - the numbered `{sessionPrefix}-orchestrator-\d+` worktree shape
+   *
+   * What it intentionally rejects compared to `isOrchestratorSessionRecord`:
+   *   - bare `{foreign}-orchestrator` names (e.g. `{projectId}-orchestrator`
+   *     where projectId ≠ sessionPrefix) — these are the records that caused
+   *     issue #1048's dashboard link mismatch. Without this guard, repair
+   *     would stamp `role: orchestrator` on them and they would then leak
+   *     through `isOrchestratorSession()` in the dashboard/CLI via the
+   *     role-metadata branch on the next read.
+   */
+  function isRepairableOrchestratorRecord(
+    sessionId: string,
+    raw: Record<string, string> | null | undefined,
+    sessionPrefix?: string,
+  ): boolean {
+    if (!raw) return false;
+    if (raw["role"] === "orchestrator") return true;
+    if (!sessionPrefix) return false;
+    if (sessionId === `${sessionPrefix}-orchestrator`) return true;
+    return new RegExp(`^${escapeRegex(sessionPrefix)}-orchestrator-\\d+$`).test(sessionId);
+  }
+
   function isCleanupProtectedSession(
     project: ProjectConfig,
     sessionId: string,
@@ -401,7 +429,10 @@ export function createSessionManager(deps: SessionManagerDeps): OpenCodeSessionM
     sessionPrefix?: string,
   ): ActiveSessionRecord {
     const repaired = { ...record, raw: { ...record.raw } };
-    if (!isOrchestratorSessionRecord(repaired.sessionName, repaired.raw, sessionPrefix)) {
+    // Use the strict repairable predicate: bare legacy `*-orchestrator`
+    // records are not eligible for role backfill, so they cannot leak into
+    // `isOrchestratorSession` via a stamped role on the next sm.list().
+    if (!isRepairableOrchestratorRecord(repaired.sessionName, repaired.raw, sessionPrefix)) {
       return repaired;
     }
 
@@ -447,7 +478,7 @@ export function createSessionManager(deps: SessionManagerDeps): OpenCodeSessionM
     const duplicatePRAttachments = new Map<string, ActiveSessionRecord[]>();
 
     for (const record of repaired) {
-      if (isOrchestratorSessionRecord(record.sessionName, record.raw, sessionPrefix)) {
+      if (isRepairableOrchestratorRecord(record.sessionName, record.raw, sessionPrefix)) {
         record.raw = repairSingleSessionMetadataOnRead(sessionsDir, record, sessionPrefix).raw;
         continue;
       }
